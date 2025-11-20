@@ -1,0 +1,1262 @@
+openapi: 3.0.3
+info:
+  title: OpusCore API
+  version: 0.2.0
+  description: >
+    OpusCore – Operational Operating System for BAU Intelligence, Program Orchestration,
+    KPI/OKR performance, and Executive Dashboards.
+
+servers:
+  - url: https://api.useopuscore.com/v1
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: BAU
+  - name: Programs
+  - name: Workstreams
+  - name: Workshops
+  - name: Tasks
+  - name: AI
+  - name: KPI
+  - name: OKR
+  - name: Dashboards
+  - name: Signals
+  - name: Metrics
+
+paths:
+  /auth/login:
+    post:
+      summary: Login and obtain JWT token pair
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+              required: [email, password]
+      responses:
+        '200':
+          description: Auth tokens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '401':
+          description: Invalid credentials
+
+  /users/me:
+    get:
+      summary: Get current authenticated user profile
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /bau/processes:
+    get:
+      summary: List BAU processes
+      tags: [BAU]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: teamId
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [draft, active, archived]
+        - in: query
+          name: q
+          description: Text search on name/description
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of BAU processes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BAUProcessSummary'
+    post:
+      summary: Create a new BAU process
+      tags: [BAU]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BAUProcessCreate'
+      responses:
+        '201':
+          description: Created BAU process
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BAUProcess'
+
+  /bau/processes/{id}:
+    get:
+      summary: Get a BAU process by id
+      tags: [BAU]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: BAU process
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BAUProcess'
+        '404':
+          description: Not found
+    patch:
+      summary: Update a BAU process
+      tags: [BAU]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BAUProcessUpdate'
+      responses:
+        '200':
+          description: Updated BAU process
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BAUProcess'
+
+  /bau/processes/{id}/versions:
+    get:
+      summary: List versions of a BAU process
+      tags: [BAU]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Versions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BAUProcessVersion'
+
+  /programs:
+    get:
+      summary: List programs
+      tags: [Programs]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [draft, mobilizing, active, closed]
+      responses:
+        '200':
+          description: Programs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProgramSummary'
+    post:
+      summary: Create a new program
+      tags: [Programs]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProgramCreate'
+      responses:
+        '201':
+          description: Program created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Program'
+
+  /programs/{id}:
+    get:
+      summary: Get program by id
+      tags: [Programs]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Program
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Program'
+        '404':
+          description: Not found
+    patch:
+      summary: Update a program
+      tags: [Programs]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProgramUpdate'
+      responses:
+        '200':
+          description: Updated program
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Program'
+
+  /programs/{id}/workstreams:
+    get:
+      summary: List workstreams for a program
+      tags: [Workstreams]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Workstreams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Workstream'
+    post:
+      summary: Create a workstream for a program
+      tags: [Workstreams]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkstreamCreate'
+      responses:
+        '201':
+          description: Workstream created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workstream'
+
+  /programs/{id}/workshops:
+    get:
+      summary: List workshops for a program
+      tags: [Workshops]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Workshops
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Workshop'
+    post:
+      summary: Create a workshop for a program
+      tags: [Workshops]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkshopCreate'
+      responses:
+        '201':
+          description: Workshop created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workshop'
+
+  /tasks:
+    get:
+      summary: List tasks
+      tags: [Tasks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: assignedTo
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [open, in_progress, done, cancelled]
+      responses:
+        '200':
+          description: Tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+    post:
+      summary: Create a task
+      tags: [Tasks]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+      responses:
+        '201':
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+
+  /tasks/{id}:
+    patch:
+      summary: Update a task
+      tags: [Tasks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+      responses:
+        '200':
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+
+  /ai/generate-program:
+    post:
+      summary: AI-generate a program boilerplate from intake
+      tags: [AI]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProgramIntake'
+      responses:
+        '200':
+          description: Generated program draft
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgramDraft'
+
+  /ai/suggest-workshops:
+    post:
+      summary: AI-suggest workshops for a program
+      tags: [AI]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                programId:
+                  type: string
+              required: [programId]
+      responses:
+        '200':
+          description: Suggested workshops
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkshopSuggestion'
+
+  /ai/draft-bau:
+    post:
+      summary: Draft BAU process from unstructured signals
+      tags: [AI]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BAUDraftRequest'
+      responses:
+        '200':
+          description: Draft BAU process
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BAUProcessDraft'
+
+  /kpis:
+    get:
+      summary: List KPIs
+      tags: [KPI]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: ownerId
+          schema:
+            type: string
+        - in: query
+          name: teamId
+          schema:
+            type: string
+        - in: query
+          name: scope
+          description: Context scope
+          schema:
+            type: string
+            enum: [user, team, workstream, program, org]
+      responses:
+        '200':
+          description: KPIs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/KPI'
+    post:
+      summary: Create a KPI definition
+      tags: [KPI]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KPICreate'
+      responses:
+        '201':
+          description: KPI created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KPI'
+
+  /kpis/{id}:
+    get:
+      summary: Get a KPI
+      tags: [KPI]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: KPI
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KPI'
+    patch:
+      summary: Update a KPI
+      tags: [KPI]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KPIUpdate'
+      responses:
+        '200':
+          description: KPI updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KPI'
+
+  /okrs:
+    get:
+      summary: List OKRs
+      tags: [OKR]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: ownerId
+          schema:
+            type: string
+        - in: query
+          name: teamId
+          schema:
+            type: string
+        - in: query
+          name: scope
+          schema:
+            type: string
+            enum: [user, team, workstream, program, org]
+        - in: query
+          name: period
+          schema:
+            type: string
+            description: e.g. 2025-Q1
+      responses:
+        '200':
+          description: OKRs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OKR'
+    post:
+      summary: Create an OKR (Objective with Key Results)
+      tags: [OKR]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OKRCreate'
+      responses:
+        '201':
+          description: OKR created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OKR'
+
+  /okrs/{id}:
+    get:
+      summary: Get an OKR
+      tags: [OKR]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OKR
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OKR'
+    patch:
+      summary: Update an OKR
+      tags: [OKR]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OKRUpdate'
+      responses:
+        '200':
+          description: OKR updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OKR'
+
+  /dashboards/executive:
+    get:
+      summary: Get executive dashboard view
+      tags: [Dashboards]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: period
+          description: Time window (e.g. 2025-Q1)
+          schema:
+            type: string
+        - in: query
+          name: orgUnit
+          description: Optional organisational unit filter
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Executive dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardView'
+
+  /signals:
+    get:
+      summary: List recent signals emitted by the platform
+      tags: [Signals]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+          description: e.g. bau.process.updated, task.done
+        - in: query
+          name: since
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Signals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Signal'
+
+  /metrics/events:
+    post:
+      summary: Submit a metric or KPI/OKR progress event
+      tags: [Metrics]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MetricEvent'
+      responses:
+        '202':
+          description: Event accepted
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AuthTokens:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { type: string }
+        teamId:
+          type: string
+          nullable: true
+
+    BAUProcessSummary:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        teamId: { type: string }
+        status:
+          type: string
+          enum: [draft, active, archived]
+
+    BAUProcess:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        ownerId: { type: string }
+        teamId: { type: string }
+        systemIds:
+          type: array
+          items: { type: string }
+        status:
+          type: string
+          enum: [draft, active, archived]
+        version:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    BAUProcessCreate:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        ownerId: { type: string }
+        teamId: { type: string }
+        systemIds:
+          type: array
+          items: { type: string }
+      required: [name, ownerId, teamId]
+
+    BAUProcessUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        ownerId: { type: string }
+        teamId: { type: string }
+        systemIds:
+          type: array
+          items: { type: string }
+        status:
+          type: string
+          enum: [draft, active, archived]
+
+    BAUProcessVersion:
+      type: object
+      properties:
+        version: { type: integer }
+        createdAt:
+          type: string
+          format: date-time
+        createdBy: { type: string }
+
+    ProgramSummary:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        status:
+          type: string
+          enum: [draft, mobilizing, active, closed]
+
+    Program:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        sponsorId: { type: string }
+        managerId: { type: string }
+        scope: { type: string }
+        status:
+          type: string
+          enum: [draft, mobilizing, active, closed]
+        createdAt:
+          type: string
+          format: date-time
+
+    ProgramCreate:
+      type: object
+      properties:
+        name: { type: string }
+        sponsorId: { type: string }
+        managerId: { type: string }
+        scope: { type: string }
+      required: [name, sponsorId, managerId]
+
+    ProgramUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        sponsorId: { type: string }
+        managerId: { type: string }
+        scope: { type: string }
+        status:
+          type: string
+          enum: [draft, mobilizing, active, closed]
+
+    Workstream:
+      type: object
+      properties:
+        id: { type: string }
+        programId: { type: string }
+        name: { type: string }
+        leadId: { type: string }
+
+    WorkstreamCreate:
+      type: object
+      properties:
+        name: { type: string }
+        leadId:
+          type: string
+          nullable: true
+      required: [name]
+
+    Workshop:
+      type: object
+      properties:
+        id: { type: string }
+        programId: { type: string }
+        type: { type: string }
+        scheduledFor:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [planned, scheduled, completed, cancelled]
+
+    WorkshopCreate:
+      type: object
+      properties:
+        type: { type: string }
+        scheduledFor:
+          type: string
+          format: date-time
+      required: [type]
+
+    Task:
+      type: object
+      properties:
+        id: { type: string }
+        assignedTo:
+          type: string
+          nullable: true
+        type: { type: string }
+        status:
+          type: string
+          enum: [open, in_progress, done, cancelled]
+        payload:
+          type: object
+        dueDate:
+          type: string
+          format: date-time
+
+    TaskCreate:
+      type: object
+      properties:
+        assignedTo:
+          type: string
+          nullable: true
+        type: { type: string }
+        payload:
+          type: object
+        dueDate:
+          type: string
+          format: date-time
+      required: [type]
+
+    TaskUpdate:
+      type: object
+      properties:
+        assignedTo:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [open, in_progress, done, cancelled]
+        payload:
+          type: object
+        dueDate:
+          type: string
+          format: date-time
+
+    ProgramIntake:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        objectives:
+          type: array
+          items: { type: string }
+        impactedTeams:
+          type: array
+          items: { type: string }
+        impactedSystems:
+          type: array
+          items: { type: string }
+      required: [name, description]
+
+    ProgramDraft:
+      type: object
+      properties:
+        program:
+          $ref: '#/components/schemas/ProgramCreate'
+        suggestedWorkstreams:
+          type: array
+          items: { type: string }
+        suggestedWorkshops:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkshopSuggestion'
+        boilerplate:
+          type: object
+          description: Generated narrative and structured program content.
+
+    WorkshopSuggestion:
+      type: object
+      properties:
+        type: { type: string }
+        rationale: { type: string }
+
+    BAUDraftRequest:
+      type: object
+      properties:
+        signals:
+          type: array
+          description: Unstructured inputs like ticket texts, log snippets.
+          items:
+            type: string
+        teamId:
+          type: string
+          nullable: true
+      required: [signals]
+
+    BAUProcessDraft:
+      type: object
+      properties:
+        draft:
+          $ref: '#/components/schemas/BAUProcessCreate'
+        confidence:
+          type: number
+          format: float
+
+    KPI:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description:
+          type: string
+        ownerId:
+          type: string
+        teamId:
+          type: string
+          nullable: true
+        scope:
+          type: string
+          enum: [user, team, workstream, program, org]
+        targetValue:
+          type: number
+        currentValue:
+          type: number
+        unit:
+          type: string
+        period:
+          type: string
+          description: e.g. 2025-Q1
+        status:
+          type: string
+          enum: [on_track, at_risk, off_track]
+        createdAt:
+          type: string
+          format: date-time
+
+    KPICreate:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        ownerId: { type: string }
+        teamId:
+          type: string
+          nullable: true
+        scope:
+          type: string
+          enum: [user, team, workstream, program, org]
+        targetValue:
+          type: number
+        unit:
+          type: string
+        period:
+          type: string
+      required: [name, ownerId, scope, targetValue, unit, period]
+
+    KPIUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        ownerId: { type: string }
+        teamId:
+          type: string
+          nullable: true
+        scope:
+          type: string
+          enum: [user, team, workstream, program, org]
+        targetValue:
+          type: number
+        currentValue:
+          type: number
+        unit:
+          type: string
+        period:
+          type: string
+        status:
+          type: string
+          enum: [on_track, at_risk, off_track]
+
+    OKR:
+      type: object
+      properties:
+        id: { type: string }
+        ownerId: { type: string }
+        teamId:
+          type: string
+          nullable: true
+        scope:
+          type: string
+          enum: [user, team, workstream, program, org]
+        period:
+          type: string
+        objective:
+          type: string
+        keyResults:
+          type: array
+          items:
+            $ref: '#/components/schemas/KeyResult'
+        status:
+          type: string
+          enum: [on_track, at_risk, off_track]
+        createdAt:
+          type: string
+          format: date-time
+
+    OKRCreate:
+      type: object
+      properties:
+        ownerId: { type: string }
+        teamId:
+          type: string
+          nullable: true
+        scope:
+          type: string
+          enum: [user, team, workstream, program, org]
+        period:
+          type: string
+        objective:
+          type: string
+        keyResults:
+          type: array
+          items:
+            $ref: '#/components/schemas/KeyResultCreate'
+      required: [ownerId, scope, period, objective, keyResults]
+
+    OKRUpdate:
+      type: object
+      properties:
+        objective:
+          type: string
+        keyResults:
+          type: array
+          items:
+            $ref: '#/components/schemas/KeyResultCreate'
+        status:
+          type: string
+          enum: [on_track, at_risk, off_track]
+
+    KeyResult:
+      type: object
+      properties:
+        id: { type: string }
+        description:
+          type: string
+        targetValue:
+          type: number
+        currentValue:
+          type: number
+        unit:
+          type: string
+        status:
+          type: string
+          enum: [on_track, at_risk, off_track]
+
+    KeyResultCreate:
+      type: object
+      properties:
+        description:
+          type: string
+        targetValue:
+          type: number
+        unit:
+          type: string
+      required: [description, targetValue, unit]
+
+    DashboardView:
+      type: object
+      properties:
+        period:
+          type: string
+        orgUnit:
+          type: string
+          nullable: true
+        widgets:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardWidget'
+
+    DashboardWidget:
+      type: object
+      properties:
+        id: { type: string }
+        type: { type: string }
+        title: { type: string }
+        description:
+          type: string
+        data:
+          type: object
+
+    Signal:
+      type: object
+      properties:
+        id: { type: string }
+        type: { type: string }
+        source:
+          type: string
+        payload:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+    MetricEvent:
+      type: object
+      properties:
+        eventType:
+          type: string
+          description: e.g. "kpi.progress", "okr.progress", "task.completed"
+        sourceId:
+          type: string
+          description: ID of related object (task, KPI, OKR, etc.)
+        ownerId:
+          type: string
+        teamId:
+          type: string
+          nullable: true
+        value:
+          type: number
+          nullable: true
+        metadata:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+      required: [eventType, sourceId]
