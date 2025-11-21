@@ -44,3 +44,12 @@ prisma/migrations/
 
 # Build outputs
 *.tsbuildinfo
+*.js
+*.d.ts
+*.js.map
+*.d.ts.map
+
+# But allow config files
+!*.config.js
+!jest.config.js
+!next.config.js

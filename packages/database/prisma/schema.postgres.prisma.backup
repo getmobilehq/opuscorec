@@ -1,13 +1,15 @@
-// OpusCore Database Schema - SQLite Version for Testing
+// OpusCore Database Schema
 // Based on OpusCore Master Build Prompt v2 - Section 4 (ERD)
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
 }
 
 // ============================================
@@ -19,7 +21,7 @@ model User {
   email     String   @unique
   name      String
   password  String
-  role      String   @default("USER")
+  role      UserRole @default(USER)
   teamId    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -42,6 +44,14 @@ model User {
   @@map("users")
 }
 
+enum UserRole {
+  ADMIN
+  EXECUTIVE
+  PROGRAM_MANAGER
+  TEAM_LEAD
+  USER
+}
+
 model Team {
   id           String  @id @default(cuid())
   name         String
@@ -51,7 +61,7 @@ model Team {
   updatedAt    DateTime @updatedAt
 
   // Relations
-  parentTeam     Team?         @relation("TeamHierarchy", fields: [parentTeamId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  parentTeam     Team?         @relation("TeamHierarchy", fields: [parentTeamId], references: [id])
   childTeams     Team[]        @relation("TeamHierarchy")
   members        User[]
   bauProcesses   BAUProcess[]
@@ -68,16 +78,16 @@ model Team {
 // ============================================
 
 model BAUProcess {
-  id          String   @id @default(cuid())
+  id          String            @id @default(cuid())
   name        String
-  description String
+  description String            @db.Text
   ownerId     String
   teamId      String
-  systemIds   String   // JSON string for SQLite
-  status      String   @default("DRAFT")
-  version     Int      @default(1)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  systemIds   String[]
+  status      BAUProcessStatus  @default(DRAFT)
+  version     Int               @default(1)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
   // Relations
   owner         User                @relation("BAUProcessOwner", fields: [ownerId], references: [id])
@@ -85,6 +95,7 @@ model BAUProcess {
   versions      BAUProcessVersion[]
   linkedTasks   Task[]
   programLinks  ProgramBAULink[]
+  embeddings    BAUEmbedding[]
 
   @@index([ownerId])
   @@index([teamId])
@@ -92,11 +103,17 @@ model BAUProcess {
   @@map("bau_processes")
 }
 
+enum BAUProcessStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
 model BAUProcessVersion {
   id            String   @id @default(cuid())
   bauProcessId  String
   version       Int
-  content       String   // JSON string for SQLite
+  content       Json
   createdAt     DateTime @default(now())
   createdById   String
 
@@ -109,21 +126,35 @@ model BAUProcessVersion {
   @@map("bau_process_versions")
 }
 
+model BAUEmbedding {
+  id           String                 @id @default(cuid())
+  bauProcessId String
+  embedding    Unsupported("vector")?
+  content      String                 @db.Text
+  createdAt    DateTime               @default(now())
+
+  // Relations
+  bauProcess BAUProcess @relation(fields: [bauProcessId], references: [id], onDelete: Cascade)
+
+  @@index([bauProcessId])
+  @@map("bau_embeddings")
+}
+
 // ============================================
 // SECTION 3: Programs & Workstreams
 // ============================================
 
 model Program {
-  id          String   @id @default(cuid())
+  id          String        @id @default(cuid())
   name        String
-  description String?
+  description String?       @db.Text
   sponsorId   String
   managerId   String
-  scope       String?
-  status      String   @default("DRAFT")
-  healthScore Int?     @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  scope       String?       @db.Text
+  status      ProgramStatus @default(DRAFT)
+  healthScore Int?          @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   // Relations
   sponsor       User             @relation("ProgramSponsor", fields: [sponsorId], references: [id])
@@ -141,11 +172,18 @@ model Program {
   @@map("programs")
 }
 
+enum ProgramStatus {
+  DRAFT
+  MOBILIZING
+  ACTIVE
+  CLOSED
+}
+
 model Workstream {
   id          String   @id @default(cuid())
   programId   String
   name        String
-  description String?
+  description String?  @db.Text
   leadId      String?
   status      String   @default("planning")
   createdAt   DateTime @default(now())
@@ -185,18 +223,18 @@ model ProgramBAULink {
 // ============================================
 
 model Workshop {
-  id           String   @id @default(cuid())
+  id           String         @id @default(cuid())
   programId    String
   type         String
   name         String?
-  description  String?
+  description  String?        @db.Text
   scheduledFor DateTime?
-  status       String   @default("PLANNED")
+  status       WorkshopStatus @default(PLANNED)
   outputsRef   String?
-  agenda       String?  // JSON string
-  outcomes     String?  // JSON string
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  agenda       Json?
+  outcomes     Json?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   // Relations
   program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
@@ -207,26 +245,33 @@ model Workshop {
   @@map("workshops")
 }
 
+enum WorkshopStatus {
+  PLANNED
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
 // ============================================
 // SECTION 5: Tasks
 // ============================================
 
 model Task {
-  id            String    @id @default(cuid())
+  id            String     @id @default(cuid())
   type          String
   title         String
-  description   String?
-  status        String    @default("OPEN")
+  description   String?    @db.Text
+  status        TaskStatus @default(OPEN)
   assignedToId  String?
   programId     String?
   bauProcessId  String?
   workstreamId  String?
   workshopId    String?
-  payload       String?   // JSON string
+  payload       Json?
   dueDate       DateTime?
   completedAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
   // Relations
   assignedTo  User?       @relation("TaskAssignee", fields: [assignedToId], references: [id])
@@ -242,26 +287,33 @@ model Task {
   @@map("tasks")
 }
 
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
 // ============================================
 // SECTION 6: KPIs & OKRs
 // ============================================
 
 model KPI {
-  id           String   @id @default(cuid())
+  id           String          @id @default(cuid())
   name         String
-  description  String?
+  description  String?         @db.Text
   ownerId      String
   teamId       String?
   programId    String?
   workstreamId String?
-  scope        String
+  scope        KPIScope
   targetValue  Float
-  currentValue Float    @default(0)
+  currentValue Float           @default(0)
   unit         String
   period       String
-  status       String   @default("ON_TRACK")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  status       PerformanceStatus @default(ON_TRACK)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
   // Relations
   owner        User        @relation("KPIOwner", fields: [ownerId], references: [id])
@@ -277,18 +329,26 @@ model KPI {
   @@map("kpis")
 }
 
+enum KPIScope {
+  USER
+  TEAM
+  WORKSTREAM
+  PROGRAM
+  ORG
+}
+
 model OKR {
-  id           String   @id @default(cuid())
+  id           String            @id @default(cuid())
   ownerId      String
   teamId       String?
   programId    String?
   workstreamId String?
-  scope        String
+  scope        KPIScope
   period       String
-  objective    String
-  status       String   @default("ON_TRACK")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  objective    String            @db.Text
+  status       PerformanceStatus @default(ON_TRACK)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
   // Relations
   owner      User         @relation("OKROwner", fields: [ownerId], references: [id])
@@ -305,21 +365,27 @@ model OKR {
 }
 
 model KeyResult {
-  id           String   @id @default(cuid())
+  id           String            @id @default(cuid())
   okrId        String
-  description  String
+  description  String            @db.Text
   targetValue  Float
-  currentValue Float    @default(0)
+  currentValue Float             @default(0)
   unit         String
-  status       String   @default("ON_TRACK")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  status       PerformanceStatus @default(ON_TRACK)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
   // Relations
   okr OKR @relation(fields: [okrId], references: [id], onDelete: Cascade)
 
   @@index([okrId])
   @@map("key_results")
+}
+
+enum PerformanceStatus {
+  ON_TRACK
+  AT_RISK
+  OFF_TRACK
 }
 
 // ============================================
@@ -330,7 +396,7 @@ model Signal {
   id        String   @id @default(cuid())
   type      String
   source    String
-  payload   String   // JSON string
+  payload   Json
   createdAt DateTime @default(now())
   createdBy String?
 
@@ -350,7 +416,7 @@ model MetricEvent {
   teamId    String?
   kpiId     String?
   value     Float?
-  metadata  String?  // JSON string
+  metadata  Json?
   createdAt DateTime @default(now())
 
   // Relations
@@ -363,4 +429,125 @@ model MetricEvent {
   @@index([createdAt])
   @@index([kpiId])
   @@map("metric_events")
+}
+
+// ============================================
+// SECTION 8: Dashboard & Templates
+// ============================================
+
+model DashboardWidgetConfig {
+  id            String   @id @default(cuid())
+  type          String
+  title         String
+  description   String?  @db.Text
+  config        Json
+  ownerRoleScope String[]
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([type])
+  @@map("dashboard_widget_configs")
+}
+
+model Template {
+  id          String   @id @default(cuid())
+  type        String
+  name        String
+  description String?  @db.Text
+  content     Json
+  category    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([category])
+  @@map("templates")
+}
+
+// ============================================
+// SECTION 9: Workflows
+// ============================================
+
+model WorkflowInstance {
+  id           String           @id @default(cuid())
+  workflowType String
+  entityId     String?
+  entityType   String?
+  status       WorkflowStatus   @default(RUNNING)
+  currentState String
+  context      Json
+  startedAt    DateTime         @default(now())
+  completedAt  DateTime?
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  steps WorkflowStep[]
+
+  @@index([workflowType])
+  @@index([status])
+  @@index([entityId])
+  @@map("workflow_instances")
+}
+
+model WorkflowStep {
+  id         String         @id @default(cuid())
+  instanceId String
+  stepName   String
+  status     WorkflowStatus @default(PENDING)
+  input      Json?
+  output     Json?
+  error      String?        @db.Text
+  startedAt  DateTime?
+  completedAt DateTime?
+  createdAt  DateTime       @default(now())
+
+  // Relations
+  instance WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId])
+  @@index([status])
+  @@map("workflow_steps")
+}
+
+enum WorkflowStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ============================================
+// SECTION 10: AI & Search
+// ============================================
+
+model AIConversation {
+  id        String   @id @default(cuid())
+  agentType String
+  userId    String?
+  context   Json
+  messages  Json[]
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agentType])
+  @@index([userId])
+  @@map("ai_conversations")
+}
+
+model SearchIndex {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  content    String   @db.Text
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([entityType, entityId])
+  @@index([entityType])
+  @@map("search_index")
 }
