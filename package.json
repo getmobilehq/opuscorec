@@ -1,0 +1,31 @@
+{
+  "name": "opuscore",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpusCore - Operational Operating System for BAU Intelligence, Program Orchestration, and Executive Insight",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace=@opuscore/api",
+    "dev:web": "npm run dev --workspace=@opuscore/web",
+    "dev:ai": "npm run dev --workspace=@opuscore/ai-orchestrator",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "db:generate": "npm run db:generate --workspace=@opuscore/database",
+    "db:migrate": "npm run db:migrate --workspace=@opuscore/database",
+    "db:studio": "npm run db:studio --workspace=@opuscore/database"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "prettier": "^3.1.0",
+    "eslint": "^8.55.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
