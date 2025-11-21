@@ -23,7 +23,7 @@ export class DashboardsController {
       },
     });
 
-    const bauCoverage = await this.prisma.bauProcess.count({
+    const bauCoverage = await this.prisma.bAUProcess.count({
       where: { status: 'ACTIVE' },
     });
 

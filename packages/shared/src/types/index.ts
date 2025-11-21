@@ -31,5 +31,4 @@ export interface FilterParams {
 
 // Domain-specific types
 export type EntityStatus = 'draft' | 'active' | 'archived' | 'closed';
-export type PerformanceStatus = 'on_track' | 'at_risk' | 'off_track';
 export type WorkflowStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';

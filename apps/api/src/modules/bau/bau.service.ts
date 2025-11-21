@@ -17,27 +17,28 @@ export class BAUService {
   ) {}
 
   async create(data: CreateBAUProcessDto, userId: string): Promise<BAUProcessResponse> {
-    const bauProcess = await this.prisma.bauProcess.create({
+    const bauProcess = await this.prisma.bAUProcess.create({
       data: {
         name: data.name,
         description: data.description,
         ownerId: data.ownerId,
         teamId: data.teamId,
-        systemIds: data.systemIds || [],
+        systemIds: JSON.stringify(data.systemIds || []),
         version: 1,
       },
     });
 
     // Create initial version
-    await this.prisma.bauProcessVersion.create({
+    await this.prisma.bAUProcessVersion.create({
       data: {
         bauProcessId: bauProcess.id,
         version: 1,
-        content: {
+        content: JSON.stringify({
           name: data.name,
           description: data.description,
-          systemIds: data.systemIds || [],
+          systemIds: JSON.stringify(data.systemIds || []),
         },
+        }),
         createdById: userId,
       },
     });
@@ -53,7 +54,7 @@ export class BAUService {
       },
     });
 
-    return bauProcess as BAUProcessResponse;
+    return { ...bauProcess, systemIds: JSON.parse(bauProcess.systemIds) } as BAUProcessResponse;
   }
 
   async findAll(filters?: {
@@ -78,7 +79,7 @@ export class BAUService {
       ];
     }
 
-    const processes = await this.prisma.bauProcess.findMany({
+    const processes = await this.prisma.bAUProcess.findMany({
       where,
       select: {
         id: true,
@@ -95,7 +96,7 @@ export class BAUService {
   }
 
   async findById(id: string): Promise<BAUProcessResponse> {
-    const bauProcess = await this.prisma.bauProcess.findUnique({
+    const bauProcess = await this.prisma.bAUProcess.findUnique({
       where: { id },
       include: {
         owner: {
@@ -124,7 +125,7 @@ export class BAUService {
   async update(id: string, data: UpdateBAUProcessDto, userId: string): Promise<BAUProcessResponse> {
     const existing = await this.findById(id);
 
-    const updated = await this.prisma.bauProcess.update({
+    const updated = await this.prisma.bAUProcess.update({
       where: { id },
       data: {
         ...(data.name && { name: data.name }),
@@ -138,15 +139,16 @@ export class BAUService {
     });
 
     // Create new version
-    await this.prisma.bauProcessVersion.create({
+    await this.prisma.bAUProcessVersion.create({
       data: {
         bauProcessId: updated.id,
         version: updated.version,
-        content: {
+        content: JSON.stringify({
           name: updated.name,
           description: updated.description,
           systemIds: updated.systemIds,
         },
+        }),
         createdById: userId,
       },
     });
@@ -168,7 +170,7 @@ export class BAUService {
   async getVersions(id: string) {
     await this.findById(id); // Verify exists
 
-    return this.prisma.bauProcessVersion.findMany({
+    return this.prisma.bAUProcessVersion.findMany({
       where: { bauProcessId: id },
       include: {
         createdBy: {
@@ -188,7 +190,7 @@ export class BAUService {
   async delete(id: string): Promise<void> {
     await this.findById(id); // Verify exists
 
-    await this.prisma.bauProcess.delete({
+    await this.prisma.bAUProcess.delete({
       where: { id },
     });
 
@@ -227,7 +229,7 @@ export class BAUService {
       where.teamId = teamId;
     }
 
-    return this.prisma.bauProcess.findMany({
+    return this.prisma.bAUProcess.findMany({
       where,
       select: {
         id: true,

@@ -50,19 +50,21 @@ export class UsersService {
         ...(filters?.teamId && { teamId: filters.teamId }),
         ...(filters?.role && { role: filters.role as any }),
       },
-      include: {
-        team: true,
-      },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
         teamId: true,
-        team: true,
+        team: {
+          select: {
+            id: true,
+            name: true,
+            department: true,
+          },
+        },
         createdAt: true,
         updatedAt: true,
-        password: false,
       },
     });
   }
