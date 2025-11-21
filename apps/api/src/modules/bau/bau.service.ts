@@ -28,7 +28,6 @@ export class BAUService {
       },
     });
 
-    // Create initial version
     await this.prisma.bAUProcessVersion.create({
       data: {
         bauProcessId: bauProcess.id,
@@ -36,14 +35,12 @@ export class BAUService {
         content: JSON.stringify({
           name: data.name,
           description: data.description,
-          systemIds: JSON.stringify(data.systemIds || []),
-        },
+          systemIds: data.systemIds || [],
         }),
         createdById: userId,
       },
     });
 
-    // Emit signal
     await this.signalsService.createSignal({
       type: SIGNAL_TYPES.BAU_CREATED,
       source: 'bau_service',
@@ -54,7 +51,10 @@ export class BAUService {
       },
     });
 
-    return { ...bauProcess, systemIds: JSON.parse(bauProcess.systemIds) } as BAUProcessResponse;
+    return {
+      ...bauProcess,
+      systemIds: JSON.parse(bauProcess.systemIds),
+    } as BAUProcessResponse;
   }
 
   async findAll(filters?: {
@@ -74,8 +74,8 @@ export class BAUService {
 
     if (filters?.search) {
       where.OR = [
-        { name: { contains: filters.search, mode: 'insensitive' } },
-        { description: { contains: filters.search, mode: 'insensitive' } },
+        { name: { contains: filters.search } },
+        { description: { contains: filters.search } },
       ];
     }
 
@@ -119,26 +119,28 @@ export class BAUService {
       throw new NotFoundException('BAU Process not found');
     }
 
-    return bauProcess as any;
+    return {
+      ...bauProcess,
+      systemIds: JSON.parse(bauProcess.systemIds),
+    } as any;
   }
 
   async update(id: string, data: UpdateBAUProcessDto, userId: string): Promise<BAUProcessResponse> {
     const existing = await this.findById(id);
 
+    const updateData: any = { version: existing.version + 1 };
+    if (data.name) updateData.name = data.name;
+    if (data.description) updateData.description = data.description;
+    if (data.ownerId) updateData.ownerId = data.ownerId;
+    if (data.teamId) updateData.teamId = data.teamId;
+    if (data.systemIds) updateData.systemIds = JSON.stringify(data.systemIds);
+    if (data.status) updateData.status = data.status;
+
     const updated = await this.prisma.bAUProcess.update({
       where: { id },
-      data: {
-        ...(data.name && { name: data.name }),
-        ...(data.description && { description: data.description }),
-        ...(data.ownerId && { ownerId: data.ownerId }),
-        ...(data.teamId && { teamId: data.teamId }),
-        ...(data.systemIds && { systemIds: data.systemIds }),
-        ...(data.status && { status: data.status as any }),
-        version: existing.version + 1,
-      },
+      data: updateData,
     });
 
-    // Create new version
     await this.prisma.bAUProcessVersion.create({
       data: {
         bauProcessId: updated.id,
@@ -146,14 +148,12 @@ export class BAUService {
         content: JSON.stringify({
           name: updated.name,
           description: updated.description,
-          systemIds: updated.systemIds,
-        },
+          systemIds: JSON.parse(updated.systemIds),
         }),
         createdById: userId,
       },
     });
 
-    // Emit signal
     await this.signalsService.createSignal({
       type: SIGNAL_TYPES.BAU_UPDATED,
       source: 'bau_service',
@@ -164,11 +164,14 @@ export class BAUService {
       },
     });
 
-    return updated as BAUProcessResponse;
+    return {
+      ...updated,
+      systemIds: JSON.parse(updated.systemIds),
+    } as BAUProcessResponse;
   }
 
   async getVersions(id: string) {
-    await this.findById(id); // Verify exists
+    await this.findById(id);
 
     return this.prisma.bAUProcessVersion.findMany({
       where: { bauProcessId: id },
@@ -188,13 +191,12 @@ export class BAUService {
   }
 
   async delete(id: string): Promise<void> {
-    await this.findById(id); // Verify exists
+    await this.findById(id);
 
     await this.prisma.bAUProcess.delete({
       where: { id },
     });
 
-    // Emit signal
     await this.signalsService.createSignal({
       type: SIGNAL_TYPES.BAU_ARCHIVED,
       source: 'bau_service',
@@ -205,7 +207,7 @@ export class BAUService {
   }
 
   async linkToProgram(bauProcessId: string, programId: string, linkType = 'impacted'): Promise<void> {
-    await this.findById(bauProcessId); // Verify BAU exists
+    await this.findById(bauProcessId);
 
     await this.prisma.programBAULink.create({
       data: {
@@ -219,8 +221,8 @@ export class BAUService {
   async searchBAU(query: string, teamId?: string) {
     const where: any = {
       OR: [
-        { name: { contains: query, mode: 'insensitive' } },
-        { description: { contains: query, mode: 'insensitive' } },
+        { name: { contains: query } },
+        { description: { contains: query } },
       ],
       status: 'ACTIVE',
     };
