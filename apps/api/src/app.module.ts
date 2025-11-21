@@ -6,6 +6,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
+import { HealthModule } from './health/health.module';
 
 // Domain modules
 import { BAUModule } from './modules/bau/bau.module';
@@ -38,6 +39,7 @@ import { AIModule } from './modules/ai/ai.module';
 
     // Core
     DatabaseModule,
+    HealthModule,
     AuthModule,
     UsersModule,
 
