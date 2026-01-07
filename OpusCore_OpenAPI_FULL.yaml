@@ -12,6 +12,7 @@ servers:
 tags:
   - name: Auth
   - name: Users
+  - name: Teams
   - name: BAU
   - name: Programs
   - name: Workstreams
@@ -65,6 +66,311 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
+
+  /teams:
+    get:
+      summary: List all teams
+      tags: [Teams]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: parentId
+          description: Filter by parent team ID (for hierarchical teams)
+          schema:
+            type: string
+        - in: query
+          name: departmentId
+          description: Filter by department
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, inactive]
+        - in: query
+          name: q
+          description: Text search on name/description
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of teams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeamSummary'
+    post:
+      summary: Create a new team
+      tags: [Teams]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamCreate'
+      responses:
+        '201':
+          description: Created team
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+        '400':
+          description: Invalid input
+        '409':
+          description: Team with same name already exists
+
+  /teams/{id}:
+    get:
+      summary: Get a team by ID
+      tags: [Teams]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Team details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+        '404':
+          description: Team not found
+    patch:
+      summary: Update a team
+      tags: [Teams]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamUpdate'
+      responses:
+        '200':
+          description: Updated team
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+        '404':
+          description: Team not found
+    delete:
+      summary: Delete a team
+      tags: [Teams]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Team deleted successfully
+        '404':
+          description: Team not found
+        '409':
+          description: Cannot delete team with active members or linked resources
+
+  /teams/{id}/members:
+    get:
+      summary: List members of a team
+      tags: [Teams]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: role
+          description: Filter by team role
+          schema:
+            type: string
+            enum: [lead, member, contributor]
+      responses:
+        '200':
+          description: Team members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeamMember'
+        '404':
+          description: Team not found
+    post:
+      summary: Add a member to a team
+      tags: [Teams]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamMemberAdd'
+      responses:
+        '201':
+          description: Member added to team
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMember'
+        '404':
+          description: Team or user not found
+        '409':
+          description: User is already a member of this team
+
+  /teams/{id}/members/{userId}:
+    patch:
+      summary: Update a team member's role
+      tags: [Teams]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamMemberUpdate'
+      responses:
+        '200':
+          description: Member role updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMember'
+        '404':
+          description: Team or member not found
+    delete:
+      summary: Remove a member from a team
+      tags: [Teams]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Member removed from team
+        '404':
+          description: Team or member not found
+
+  /teams/{id}/kpis:
+    get:
+      summary: List KPIs assigned to a team
+      tags: [Teams]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: period
+          description: Filter by period (e.g. 2025-Q1)
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [on_track, at_risk, off_track]
+      responses:
+        '200':
+          description: Team KPIs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/KPI'
+        '404':
+          description: Team not found
+
+  /teams/{id}/okrs:
+    get:
+      summary: List OKRs assigned to a team
+      tags: [Teams]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: period
+          description: Filter by period (e.g. 2025-Q1)
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [on_track, at_risk, off_track]
+      responses:
+        '200':
+          description: Team OKRs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OKR'
+        '404':
+          description: Team not found
 
   /bau/processes:
     get:
@@ -781,6 +1087,134 @@ components:
         teamId:
           type: string
           nullable: true
+
+    TeamSummary:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        departmentId:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, inactive]
+        memberCount:
+          type: integer
+          description: Number of members in the team
+
+    Team:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description:
+          type: string
+          nullable: true
+        departmentId:
+          type: string
+          nullable: true
+        parentId:
+          type: string
+          nullable: true
+          description: Parent team ID for hierarchical team structures
+        leadId:
+          type: string
+          nullable: true
+          description: Team lead user ID
+        status:
+          type: string
+          enum: [active, inactive]
+        memberCount:
+          type: integer
+          description: Number of members in the team
+        tags:
+          type: array
+          items: { type: string }
+          description: Tags for categorization and filtering
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TeamCreate:
+      type: object
+      properties:
+        name: { type: string }
+        description:
+          type: string
+          nullable: true
+        departmentId:
+          type: string
+          nullable: true
+        parentId:
+          type: string
+          nullable: true
+        leadId:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items: { type: string }
+      required: [name]
+
+    TeamUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        description:
+          type: string
+          nullable: true
+        departmentId:
+          type: string
+          nullable: true
+        parentId:
+          type: string
+          nullable: true
+        leadId:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, inactive]
+        tags:
+          type: array
+          items: { type: string }
+
+    TeamMember:
+      type: object
+      properties:
+        userId: { type: string }
+        teamId: { type: string }
+        role:
+          type: string
+          enum: [lead, member, contributor]
+          description: Role within the team
+        user:
+          $ref: '#/components/schemas/User'
+        joinedAt:
+          type: string
+          format: date-time
+
+    TeamMemberAdd:
+      type: object
+      properties:
+        userId: { type: string }
+        role:
+          type: string
+          enum: [lead, member, contributor]
+          default: member
+      required: [userId]
+
+    TeamMemberUpdate:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [lead, member, contributor]
+      required: [role]
 
     BAUProcessSummary:
       type: object
